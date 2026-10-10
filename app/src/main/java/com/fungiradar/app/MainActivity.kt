@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var store: ModelStore
     private lateinit var detector: MushroomDetector
     private val executor = Executors.newSingleThreadExecutor()
-    @Volatile private var threshold = 0.5f
+    @Volatile private var threshold = 0.35f
     @Volatile private var running = false
     private var lastAlert = 0L
     private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 65)
@@ -118,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(bar: SeekBar?) {}
             override fun onStopTrackingTouch(bar: SeekBar?) {}
         })
-        ui.threshold.progress = 40
+        ui.threshold.progress = 25
 
         ui.gpsButton.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==

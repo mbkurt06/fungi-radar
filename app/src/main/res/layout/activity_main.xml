@@ -39,10 +39,10 @@
             <Button android:id="@+id/importModel" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="Import local mushroom .tflite model"/>
             <TextView android:id="@+id/thresholdLabel" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Confidence: 50%"
+                android:layout_height="wrap_content" android:text="Confidence: 35%"
                 android:textColor="#FFFFFF"/>
             <SeekBar android:id="@+id/threshold" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:max="90" android:progress="40"/>
+                android:layout_height="wrap_content" android:max="85" android:progress="25"/>
             <Button android:id="@+id/gpsButton" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="Get GPS location"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
