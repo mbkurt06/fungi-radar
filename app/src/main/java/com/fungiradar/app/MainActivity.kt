@@ -13,6 +13,7 @@ import android.os.VibratorManager
 import android.widget.ArrayAdapter
 import android.widget.SeekBar
 import android.view.View
+import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -65,6 +66,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
 
