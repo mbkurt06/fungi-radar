@@ -19,6 +19,7 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: fungi-radar-debug
           path: app/build/outputs/apk/debug/*.apk

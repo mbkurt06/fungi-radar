@@ -10,6 +10,7 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.widget.ArrayAdapter
 import android.widget.SeekBar
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -24,9 +25,11 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     private lateinit var ui: ActivityMainBinding
+    private lateinit var store: ModelStore
+    private lateinit var detector: MushroomDetector
     private val executor = Executors.newSingleThreadExecutor()
-    private var detector: MushroomDetector? = null
     @Volatile private var threshold = 0.5f
+    @Volatile private var running = false
     private var lastAlert = 0L
     private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 65)
     private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -35,15 +38,41 @@ class MainActivity : AppCompatActivity() {
     private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result.values.any { it }) readLocation() else ui.location.text = "GPS permission denied"
     }
+    private val modelPicker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) try {
+            val file = store.import(uri)
+            store.select(file)
+            refreshModels()
+        } catch (e: Exception) { ui.status.text = "Import failed: ${e.message}" }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
+        store = ModelStore(this)
         detector = MushroomDetector(this)
-        ui.status.text = if (detector?.available == true) "AI model loaded — scanning" else
-            "Camera only: add compatible mushroom_detector.tflite to assets"
-        ui.threshold.progress = 40
+        refreshModels()
+        ui.importModel.setOnClickListener { modelPicker.launch(arrayOf("*/*")) }
+        ui.modelSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                val file = store.list().getOrNull(position)
+                if (file != null && file.name != detector.activeModel) {
+                    running = false
+                    executor.execute {
+                        store.select(file)
+                        val loaded = detector.load(file)
+                        runOnUiThread {
+                            ui.overlay.show(emptyList())
+                            ui.status.text = if (loaded) "AI ready: ${file.name}" else
+                                "Unsupported model: ${detector.lastError}"
+                            running = loaded
+                        }
+                    }
+                }
+            }
+        }
         ui.threshold.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
                 threshold = (progress + 10) / 100f
@@ -52,6 +81,7 @@ class MainActivity : AppCompatActivity() {
             override fun onStartTrackingTouch(bar: SeekBar?) {}
             override fun onStopTrackingTouch(bar: SeekBar?) {}
         })
+        ui.threshold.progress = 40
         ui.gpsButton.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED ||
@@ -65,40 +95,42 @@ class MainActivity : AppCompatActivity() {
         else cameraPermission.launch(Manifest.permission.CAMERA)
     }
 
+    private fun refreshModels() {
+        val models = store.list()
+        val labels = models.map { it.name }
+        ui.modelSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels.ifEmpty { listOf("No model installed") })
+        val index = models.indexOfFirst { it.name == store.selected()?.name }
+        if (index >= 0) ui.modelSpinner.setSelection(index)
+        if (models.isEmpty()) ui.status.text = "Camera only — import a compatible TFLite detection model"
+    }
+
     private fun startCamera() {
         val future = ProcessCameraProvider.getInstance(this)
         future.addListener({
             try {
                 val provider = future.get()
-                val preview = Preview.Builder().build().also {
-                    it.setSurfaceProvider(ui.preview.surfaceProvider)
-                }
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(ui.preview.surfaceProvider) }
                 val analysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-                    .build()
+                    .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888).build()
                 analysis.setAnalyzer(executor) { frame ->
                     try {
-                        val engine = detector
-                        if (engine?.available == true) {
-                            // CameraX ImageProxy.toBitmap() returns an upright bitmap in supported versions.
+                        if (running && detector.available) {
                             val raw = frame.toBitmap()
                             val rotation = frame.imageInfo.rotationDegrees
                             val bitmap = if (rotation != 0) {
                                 val matrix = android.graphics.Matrix().apply { postRotate(rotation.toFloat()) }
                                 android.graphics.Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
                             } else raw
-                            val found = engine.detect(bitmap, threshold)
+                            val found = detector.detect(bitmap, threshold)
                             runOnUiThread {
-                                // Overlay assumes FILL_CENTER; camera crop alignment needs device validation.
                                 ui.overlay.show(found)
-                                ui.status.text = "Scanning • ${found.size} candidate(s)"
+                                ui.status.text = "Scanning • ${found.size} detection(s)"
                                 if (found.isNotEmpty()) alert()
                             }
                         }
-                    } catch (e: Exception) {
-                        runOnUiThread { ui.status.text = "Detection error: ${e.message}" }
-                    } finally { frame.close() }
+                    } catch (e: Exception) { runOnUiThread { ui.status.text = "AI error: ${e.message}" } }
+                    finally { frame.close() }
                 }
                 provider.unbindAll()
                 provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
@@ -131,7 +163,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         executor.shutdown()
-        detector?.close()
+        detector.close()
         tone.release()
     }
 }

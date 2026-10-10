@@ -2,27 +2,33 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent" android:layout_height="match_parent">
-    <androidx.camera.view.PreviewView
-        android:id="@+id/preview" android:layout_width="match_parent" android:layout_height="match_parent"
+    <androidx.camera.view.PreviewView android:id="@+id/preview"
+        android:layout_width="match_parent" android:layout_height="match_parent"
         app:scaleType="fillCenter"/>
-    <com.fungiradar.app.DetectionOverlay
-        android:id="@+id/overlay" android:layout_width="match_parent" android:layout_height="match_parent"/>
+    <com.fungiradar.app.DetectionOverlay android:id="@+id/overlay"
+        android:layout_width="match_parent" android:layout_height="match_parent"/>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_gravity="top" android:orientation="vertical" android:padding="16dp"
-        android:background="#AA102018">
+        android:layout_gravity="top" android:orientation="vertical" android:padding="12dp"
+        android:background="#DD102018">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="FungiRadar • Live scan" android:textColor="#FFFFFF" android:textSize="22sp"
             android:textStyle="bold"/>
         <TextView android:id="@+id/status" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="Starting camera…"
-            android:textColor="#FFFFFF" android:paddingTop="6dp"/>
+            android:textColor="#FFFFFF" android:paddingTop="4dp"/>
         <TextView android:id="@+id/location" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="GPS: not requested"
             android:textColor="#DDFFFFFF" android:paddingTop="4dp"/>
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_gravity="bottom" android:padding="16dp" android:orientation="vertical"
-        android:background="#CC102018">
+        android:layout_gravity="bottom" android:padding="12dp" android:orientation="vertical"
+        android:background="#EE102018">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="AI model" android:textColor="#FFFFFF"/>
+        <Spinner android:id="@+id/modelSpinner" android:layout_width="match_parent"
+            android:layout_height="48dp" android:backgroundTint="#FFFFFF"/>
+        <Button android:id="@+id/importModel" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Import local .tflite model"/>
         <TextView android:id="@+id/thresholdLabel" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="Confidence: 50%"
             android:textColor="#FFFFFF"/>
@@ -31,7 +37,7 @@
         <Button android:id="@+id/gpsButton" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="Get GPS location"/>
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Visual hints only — never use to decide edibility."
+            android:text="Experimental visual hints only — never use to decide edibility."
             android:textColor="#FFFFFF" android:textSize="12sp"/>
     </LinearLayout>
 </FrameLayout>
