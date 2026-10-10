@@ -19,6 +19,8 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.fungiradar.app.databinding.ActivityMainBinding
 import com.google.android.gms.location.LocationServices
 import java.util.concurrent.Executors
@@ -32,6 +34,7 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var running = false
     private var lastAlert = 0L
     private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 65)
+
     private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) startCamera() else ui.status.text = "Camera permission required"
     }
@@ -42,7 +45,7 @@ class MainActivity : AppCompatActivity() {
         if (uri != null) try {
             val file = store.import(uri)
             store.select(file)
-            refreshModels()
+            refreshModels(selectName = file.name)
         } catch (e: Exception) { ui.status.text = "Import failed: ${e.message}" }
     }
 
@@ -50,10 +53,41 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
+
+        // Android 15+ can draw edge-to-edge by default. Respect status/navigation bars.
+        ViewCompat.setOnApplyWindowInsetsListener(ui.root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(0, bars.top, 0, bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(ui.root)
+
         store = ModelStore(this)
         detector = MushroomDetector(this)
         refreshModels()
-        ui.importModel.setOnClickListener { modelPicker.launch(arrayOf("*/*")) }
+
+        ui.importModel.setOnClickListener { modelPicker.launch(arrayOf("application/octet-stream", "*/*")) }
+        ui.downloadTestModel.setOnClickListener {
+            ui.downloadTestModel.isEnabled = false
+            ui.status.text = "Downloading TensorFlow test detector…"
+            Thread {
+                try {
+                    val file = store.downloadTestDetector()
+                    store.select(file)
+                    runOnUiThread {
+                        ui.downloadTestModel.isEnabled = true
+                        refreshModels(selectName = file.name)
+                        ui.status.text = "Test model downloaded — loading…"
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread {
+                        ui.downloadTestModel.isEnabled = true
+                        ui.status.text = "Model download failed: ${e.message}"
+                    }
+                }
+            }.start()
+        }
+
         ui.modelSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
@@ -65,14 +99,17 @@ class MainActivity : AppCompatActivity() {
                         val loaded = detector.load(file)
                         runOnUiThread {
                             ui.overlay.show(emptyList())
-                            ui.status.text = if (loaded) "AI ready: ${file.name}" else
-                                "Unsupported model: ${detector.lastError}"
+                            ui.status.text = if (loaded) {
+                                val suffix = if (file.name.contains("coco_test")) " (pipeline test; no mushroom class)" else ""
+                                "AI ready: ${file.name}$suffix"
+                            } else "Unsupported model: ${detector.lastError}"
                             running = loaded
                         }
                     }
                 }
             }
         }
+
         ui.threshold.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(bar: SeekBar?, progress: Int, fromUser: Boolean) {
                 threshold = (progress + 10) / 100f
@@ -82,6 +119,7 @@ class MainActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(bar: SeekBar?) {}
         })
         ui.threshold.progress = 40
+
         ui.gpsButton.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
                 PackageManager.PERMISSION_GRANTED ||
@@ -90,18 +128,21 @@ class MainActivity : AppCompatActivity() {
             else locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION))
         }
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED) startCamera()
         else cameraPermission.launch(Manifest.permission.CAMERA)
     }
 
-    private fun refreshModels() {
+    private fun refreshModels(selectName: String? = null) {
         val models = store.list()
         val labels = models.map { it.name }
-        ui.modelSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels.ifEmpty { listOf("No model installed") })
-        val index = models.indexOfFirst { it.name == store.selected()?.name }
+        ui.modelSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
+            labels.ifEmpty { listOf("No model installed") })
+        val wanted = selectName ?: store.selected()?.name
+        val index = models.indexOfFirst { it.name == wanted }
         if (index >= 0) ui.modelSpinner.setSelection(index)
-        if (models.isEmpty()) ui.status.text = "Camera only — import a compatible TFLite detection model"
+        if (models.isEmpty()) ui.status.text = "Camera only — download the test detector or import a mushroom model"
     }
 
     private fun startCamera() {
@@ -129,8 +170,9 @@ class MainActivity : AppCompatActivity() {
                                 if (found.isNotEmpty()) alert()
                             }
                         }
-                    } catch (e: Exception) { runOnUiThread { ui.status.text = "AI error: ${e.message}" } }
-                    finally { frame.close() }
+                    } catch (e: Exception) {
+                        runOnUiThread { ui.status.text = "AI error: ${e.message}" }
+                    } finally { frame.close() }
                 }
                 provider.unbindAll()
                 provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analysis)
@@ -160,6 +202,7 @@ class MainActivity : AppCompatActivity() {
                     "GPS: %.5f, %.5f".format(java.util.Locale.US, loc.latitude, loc.longitude)
             }.addOnFailureListener { ui.location.text = "GPS unavailable" }
     }
+
     override fun onDestroy() {
         super.onDestroy()
         executor.shutdown()
