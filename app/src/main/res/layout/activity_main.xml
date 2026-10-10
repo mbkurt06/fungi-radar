@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#102018">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:scaleType="fillCenter"/>
+
+    <com.fungiradar.app.DetectionOverlay
+        android:id="@+id/overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:background="#DD102018">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="FungiRadar • Live scan"
+            android:textColor="#FFFFFF"
+            android:textSize="22sp"
+            android:textStyle="bold"/>
+        <TextView
+            android:id="@+id/activeModelSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="AI: No model"
+            android:textColor="#80CBC4"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:paddingTop="3dp"/>
+        <TextView
+            android:id="@+id/mushroomBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🍄 MUSHROOM FOUND"
+            android:textColor="#FFEB3B"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:paddingTop="3dp"/>
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Starting camera…"
+            android:textColor="#FFFFFF"
+            android:paddingTop="3dp"/>
+        <TextView
+            android:id="@+id/location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="GPS: not requested"
+            android:textColor="#DDFFFFFF"
+            android:paddingTop="3dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/bottomControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="#F0102018">
+
+        <Button
+            android:id="@+id/toggleControls"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Controls ▲"
+            android:textAllCaps="false"/>
+
+        <ScrollView
+            android:id="@+id/controlPanel"
+            android:layout_width="match_parent"
+            android:layout_height="420dp"
+            android:fillViewport="false"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Download model preset"
+                    android:textColor="#FFFFFF"/>
+
+                <Spinner
+                    android:id="@+id/presetSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:backgroundTint="#FFFFFF"/>
+
+                <TextView
+                    android:id="@+id/presetInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="#FFFFCC80"
+                    android:textSize="12sp"
+                    android:paddingBottom="4dp"/>
+
+                <Button
+                    android:id="@+id/downloadPreset"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Download selected model"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="USING NOW"
+                    android:textColor="#80CBC4"
+                    android:textStyle="bold"
+                    android:paddingTop="8dp"/>
+
+                <TextView
+                    android:id="@+id/activeModelPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No model"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Switch installed model"
+                    android:textColor="#FFFFFF"/>
+
+                <Spinner
+                    android:id="@+id/modelSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:backgroundTint="#FFFFFF"/>
+
+                <TextView
+                    android:id="@+id/installedModels"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Installed: none"
+                    android:textColor="#B0BEC5"
+                    android:textSize="12sp"
+                    android:paddingBottom="6dp"/>
+
+                <Button
+                    android:id="@+id/importModel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Import local AI model (.tflite / .onnx)"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Target filter"
+                    android:textColor="#FFFFFF"
+                    android:paddingTop="4dp"/>
+
+                <Spinner
+                    android:id="@+id/targetSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:backgroundTint="#FFFFFF"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Mushroom/Tree filters become useful when a model containing those labels is imported."
+                    android:textColor="#FFFFCC80"
+                    android:textSize="12sp"/>
+
+                <CheckBox
+                    android:id="@+id/autoSaveFinds"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Auto-save mushroom finds (photo + GPS when available)"
+                    android:textColor="#FFFFFF"
+                    android:checked="true"/>
+                <TextView
+                    android:id="@+id/savedFinds"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Saved mushroom finds: 0"
+                    android:textColor="#80CBC4"
+                    android:paddingBottom="4dp"/>
+                <TextView
+                    android:id="@+id/thresholdLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Confidence: 35%"
+                    android:textColor="#FFFFFF"/>
+
+                <SeekBar
+                    android:id="@+id/threshold"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="85"
+                    android:progress="25"/>
+
+                <Button
+                    android:id="@+id/gpsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Get GPS location"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Experimental visual hints only — never use to decide edibility."
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+</FrameLayout>
