@@ -1,5 +1,4 @@
 package com.fungiradar.app
-
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.RectF
@@ -9,82 +8,34 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 
-class MushroomDetector(private val context: Context) : AutoCloseable {
-    private var engine: ObjectDetector? = null
-    var activeModel: String? = null
-        private set
-    var lastError: String? = null
-        private set
-
-    fun load(file: File?): Boolean {
-        close()
-        lastError = null
-        if (file == null) return false
-        return try {
-            engine = ObjectDetector.createFromFileAndOptions(
-                file, ObjectDetector.ObjectDetectorOptions.builder()
-                    .setMaxResults(25)
-                    .setScoreThreshold(0.08f)
-                    .build()
-            )
-            activeModel = file.name
-            true
-        } catch (e: Exception) {
-            lastError = e.message ?: "Incompatible TFLite detector"
-            false
+class MushroomDetector(private val context:Context):AutoCloseable{
+    private var taskEngine:ObjectDetector?=null
+    private var yoloEngine:YoloRawDetector?=null
+    var activeModel:String?=null;private set
+    var engineType:String="none";private set
+    var lastError:String?=null;private set
+    fun load(file:File?):Boolean{
+        close();lastError=null;if(file==null)return false
+        try{
+            taskEngine=ObjectDetector.createFromFileAndOptions(file,ObjectDetector.ObjectDetectorOptions.builder().setMaxResults(25).setScoreThreshold(0.08f).build())
+            activeModel=file.name;engineType="Task Vision";return true
+        }catch(te:Exception){
+            try{yoloEngine=YoloRawDetector(context,file);activeModel=file.name;engineType=yoloEngine?.description?:"YOLO";return true}
+            catch(ye:Exception){lastError="Task Vision: ${te.message}; YOLO: ${ye.message}";return false}
         }
     }
-
-    val available: Boolean get() = engine != null
-
-    fun detect(bitmap: Bitmap, threshold: Float, targetLabel: String?): List<Detection> {
-        val detector = engine ?: return emptyList()
-        val w = bitmap.width.toFloat()
-        val h = bitmap.height.toFloat()
-        val raw = detector.detect(TensorImage.fromBitmap(bitmap)).mapNotNull { result ->
-            val category = result.categories.maxByOrNull { it.score } ?: return@mapNotNull null
-            if (category.score < threshold) return@mapNotNull null
-            val label = category.label.ifBlank { "Object" }
-            if (!targetLabel.isNullOrBlank() && !label.equals(targetLabel, ignoreCase = true)) {
-                return@mapNotNull null
-            }
-            val r = result.boundingBox
-            Detection(
-                RectF(
-                    (r.left / w).coerceIn(0f, 1f),
-                    (r.top / h).coerceIn(0f, 1f),
-                    (r.right / w).coerceIn(0f, 1f),
-                    (r.bottom / h).coerceIn(0f, 1f)
-                ),
-                label, category.score
-            )
-        }.sortedByDescending { it.score }
-
-        val kept = mutableListOf<Detection>()
-        for (candidate in raw) {
-            if (kept.none { it.label.equals(candidate.label, true) && iou(it.rect, candidate.rect) > 0.65f }) {
-                kept += candidate
-                if (kept.size >= 12) break
-            }
-        }
-        return kept
+    val available:Boolean get()=taskEngine!=null||yoloEngine!=null
+    fun detect(bitmap:Bitmap,threshold:Float,targetLabel:String?):List<Detection>{
+        yoloEngine?.let{return it.detect(bitmap,threshold,targetLabel)}
+        val detector=taskEngine?:return emptyList();val w=bitmap.width.toFloat();val h=bitmap.height.toFloat()
+        val raw=detector.detect(TensorImage.fromBitmap(bitmap)).mapNotNull{res->
+            val cat=res.categories.maxByOrNull{it.score}?:return@mapNotNull null
+            if(cat.score<threshold)return@mapNotNull null
+            val label=cat.label.ifBlank{"Object"};if(!targetLabel.isNullOrBlank()&&!label.equals(targetLabel,true))return@mapNotNull null
+            val r=res.boundingBox;Detection(RectF((r.left/w).coerceIn(0f,1f),(r.top/h).coerceIn(0f,1f),(r.right/w).coerceIn(0f,1f),(r.bottom/h).coerceIn(0f,1f)),label,cat.score)
+        }.sortedByDescending{it.score}
+        val kept=mutableListOf<Detection>();for(c in raw){if(kept.none{it.label.equals(c.label,true)&&iou(it.rect,c.rect)>0.65f}){kept+=c;if(kept.size>=12)break}};return kept
     }
-
-    private fun iou(a: RectF, b: RectF): Float {
-        val left = max(a.left, b.left)
-        val top = max(a.top, b.top)
-        val right = min(a.right, b.right)
-        val bottom = min(a.bottom, b.bottom)
-        val iw = max(0f, right - left)
-        val ih = max(0f, bottom - top)
-        val intersection = iw * ih
-        val union = a.width() * a.height() + b.width() * b.height() - intersection
-        return if (union <= 0f) 0f else intersection / union
-    }
-
-    override fun close() {
-        engine?.close()
-        engine = null
-        activeModel = null
-    }
+    private fun iou(a:RectF,b:RectF):Float{val l=max(a.left,b.left);val t=max(a.top,b.top);val r=min(a.right,b.right);val bot=min(a.bottom,b.bottom);val iw=max(0f,r-l);val ih=max(0f,bot-t);val inter=iw*ih;val u=a.width()*a.height()+b.width()*b.height()-inter;return if(u<=0f)0f else inter/u}
+    override fun close(){taskEngine?.close();taskEngine=null;yoloEngine?.close();yoloEngine=null;activeModel=null;engineType="none"}
 }

@@ -11,6 +11,8 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.os.Handler
+import android.os.Looper
 import android.widget.ArrayAdapter
 import android.widget.SeekBar
 import android.view.View
@@ -32,17 +34,27 @@ class MainActivity : AppCompatActivity() {
     private lateinit var ui: ActivityMainBinding
     private lateinit var store: ModelStore
     private lateinit var detector: MushroomDetector
+    private lateinit var findStore: FindStore
     private val executor = Executors.newSingleThreadExecutor()
     @Volatile private var threshold = 0.35f
     @Volatile private var running = false
     @Volatile private var targetLabel: String? = null
     private var lastAlert = 0L
+    private var lastSaved = 0L
+    private var latestLat: Double? = null
+    private var latestLon: Double? = null
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 65)
 
     private val targetOptions = listOf(
         "All objects" to null,
         "Mushroom" to "mushroom",
         "Tree" to "tree",
+        "Plant" to "plant",
+        "Flower" to "flower",
+        "Palm tree" to "palm tree",
+        "Maple" to "maple",
+        "Willow" to "willow",
         "Person" to "person",
         "Chair" to "chair",
         "Potted plant" to "potted plant",
@@ -80,6 +92,8 @@ class MainActivity : AppCompatActivity() {
 
         store = ModelStore(this)
         detector = MushroomDetector(this)
+        findStore = FindStore(this)
+        ui.savedFinds.text = "Saved mushroom finds: ${findStore.count()}"
 
         var controlsOpen = false
         ui.toggleControls.setOnClickListener {
@@ -101,6 +115,10 @@ class MainActivity : AppCompatActivity() {
 
         ui.downloadPreset.setOnClickListener {
             val preset = ModelCatalog.presets[ui.presetSpinner.selectedItemPosition]
+            if (preset.url == null) {
+                ui.status.text = "Export this Nature model on the PC, then use Import local .tflite detector."
+                return@setOnClickListener
+            }
             ui.downloadPreset.isEnabled = false
             ui.status.text = "Downloading ${preset.title}…"
             Thread {
@@ -154,6 +172,7 @@ class MainActivity : AppCompatActivity() {
                                 "Unsupported model: ${detector.lastError}"
                             running = loaded
                             updateActiveModelUi()
+                            if (loaded) ui.status.text = "AI ready • ${detector.engineType} • ${ModelCatalog.friendlyName(file.name)}"
                             updatePresetInfo(ui.presetSpinner.selectedItemPosition)
                         }
                     }
@@ -179,6 +198,10 @@ class MainActivity : AppCompatActivity() {
             else locationPermission.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION))
         }
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED) readLocation()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
             PackageManager.PERMISSION_GRANTED) startCamera()
@@ -220,7 +243,11 @@ class MainActivity : AppCompatActivity() {
             else -> "Not installed"
         }
         ui.presetInfo.text = "$state\n${preset.note}"
-        ui.downloadPreset.text = if (installed) "MODEL ALREADY INSTALLED" else "DOWNLOAD SELECTED MODEL"
+        ui.downloadPreset.text = when {
+            installed -> "MODEL ALREADY INSTALLED"
+            preset.url == null -> "EXPORT ON PC → IMPORT .TFLITE"
+            else -> "DOWNLOAD SELECTED MODEL"
+        }
         ui.downloadPreset.isEnabled = !installed
     }
 
@@ -243,11 +270,21 @@ class MainActivity : AppCompatActivity() {
                                 android.graphics.Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
                             } else raw
                             val found = detector.detect(bitmap, threshold, targetLabel)
+                            val mushroom = found.firstOrNull { it.label.equals("Mushroom", true) }
+                            if (mushroom != null && ui.autoSaveFinds.isChecked) {
+                                val now = SystemClock.elapsedRealtime()
+                                if (now - lastSaved > 10_000L) {
+                                    lastSaved = now
+                                    val count = findStore.save(bitmap, mushroom, ModelCatalog.friendlyName(detector.activeModel), latestLat, latestLon)
+                                    runOnUiThread { ui.savedFinds.text = "Saved mushroom finds: $count" }
+                                }
+                            }
                             runOnUiThread {
                                 ui.overlay.show(found)
                                 val filter = targetLabel?.let { " • $it" } ?: ""
                                 ui.status.text = "Scanning$filter • ${found.size} detection(s)"
-                                if (found.isNotEmpty()) alert()
+                                if (found.isNotEmpty()) alert(mushroom != null)
+                                if (mushroom != null) showMushroomBanner()
                             }
                         }
                     } catch (e: Exception) {
@@ -260,11 +297,16 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun alert() {
+    private fun showMushroomBanner() {
+        ui.mushroomBanner.visibility = View.VISIBLE
+        mainHandler.postDelayed({ ui.mushroomBanner.visibility = View.GONE }, 2500L)
+    }
+
+    private fun alert(mushroom: Boolean) {
         val now = SystemClock.elapsedRealtime()
         if (now - lastAlert < 3500L) return
         lastAlert = now
-        tone.startTone(ToneGenerator.TONE_PROP_BEEP, 160)
+        tone.startTone(if (mushroom) ToneGenerator.TONE_PROP_ACK else ToneGenerator.TONE_PROP_BEEP, if (mushroom) 350 else 160)
         val vibrator = if (Build.VERSION.SDK_INT >= 31)
             getSystemService(VibratorManager::class.java).defaultVibrator
         else @Suppress("DEPRECATION") getSystemService(VIBRATOR_SERVICE) as Vibrator
@@ -278,6 +320,7 @@ class MainActivity : AppCompatActivity() {
             PackageManager.PERMISSION_GRANTED) return
         LocationServices.getFusedLocationProviderClient(this).lastLocation
             .addOnSuccessListener { loc ->
+                if (loc != null) { latestLat = loc.latitude; latestLon = loc.longitude }
                 ui.location.text = if (loc == null) "GPS: no recent fix" else
                     "GPS: %.5f, %.5f".format(java.util.Locale.US, loc.latitude, loc.longitude)
             }.addOnFailureListener { ui.location.text = "GPS unavailable" }

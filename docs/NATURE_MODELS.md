@@ -1,0 +1,28 @@
+# Nature / mushroom detection
+
+FungiRadar supports TensorFlow Lite Task Vision detectors and raw YOLOv8 TFLite detection exports.
+
+Open Images V7 has 601 classes in this app's label map. Important labels:
+- Mushroom: 347
+- Tree: 553
+- Plant: 393
+- Flower: 195
+- Palm tree: 364
+- Maple: 324
+- Willow: 586
+
+## Export on PC
+```bash
+python3 -m venv .venv-model
+source .venv-model/bin/activate
+pip install -r tools/export-requirements.txt
+python tools/export_openimages_tflite.py
+```
+
+Import `exports/yolov8n-oiv7_float32.tflite` in the app. You can also run the manual GitHub Actions workflow "Export Nature TFLite models".
+
+When Mushroom is detected, the app shows a special banner, distinct alert and (when enabled) saves a JPEG plus CSV metadata. GPS is included when permission/fix is available. Auto-saves are throttled to once per 10 seconds.
+
+Model/software licensing from Ultralytics applies to exported weights. The repository does not redistribute those model binaries.
+
+Detection is not an edibility decision.

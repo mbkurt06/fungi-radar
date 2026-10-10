@@ -40,6 +40,16 @@
             android:textStyle="bold"
             android:paddingTop="3dp"/>
         <TextView
+            android:id="@+id/mushroomBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🍄 MUSHROOM FOUND"
+            android:textColor="#FFEB3B"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:paddingTop="3dp"/>
+        <TextView
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -175,6 +185,20 @@
                     android:textColor="#FFFFCC80"
                     android:textSize="12sp"/>
 
+                <CheckBox
+                    android:id="@+id/autoSaveFinds"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Auto-save mushroom finds (photo + GPS when available)"
+                    android:textColor="#FFFFFF"
+                    android:checked="true"/>
+                <TextView
+                    android:id="@+id/savedFinds"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Saved mushroom finds: 0"
+                    android:textColor="#80CBC4"
+                    android:paddingBottom="4dp"/>
                 <TextView
                     android:id="@+id/thresholdLabel"
                     android:layout_width="match_parent"
