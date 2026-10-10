@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import sys
 from pathlib import Path
 import shutil
@@ -6,22 +7,45 @@ import shutil
 if sys.version_info[:2] != (3, 11):
     raise SystemExit(
         "FungiRadar model export requires Python 3.11. "
-        f"Current Python is {sys.version.split()[0]}. "
-        "Create the venv with python3.11 -m venv .venv-model."
+        f"Current Python is {sys.version.split()[0]}."
     )
 
+# Never let Ultralytics mutate this carefully pinned export environment.
+os.environ["YOLO_AUTOINSTALL"] = "false"
+
 import numpy as np
+import tensorflow as tf
+import tf_keras
 import ultralytics
+import onnx
+import onnx2tf
 from ultralytics import YOLO
 
+EXPECTED = {
+    "ultralytics": "8.3.229",
+    "numpy": "1.26.4",
+    "tensorflow": "2.19.0",
+    "tf_keras": "2.19.0",
+    "onnx": "1.17.0",
+    "onnx2tf": "1.28.8",
+}
+ACTUAL = {
+    "ultralytics": ultralytics.__version__,
+    "numpy": np.__version__,
+    "tensorflow": tf.__version__,
+    "tf_keras": tf_keras.__version__,
+    "onnx": onnx.__version__,
+    "onnx2tf": onnx2tf.__version__,
+}
 print(f"Python: {sys.version.split()[0]}")
-print(f"Ultralytics: {ultralytics.__version__}")
-print(f"NumPy: {np.__version__}")
+for key, value in ACTUAL.items():
+    print(f"{key}: {value}")
 
-if ultralytics.__version__ != "8.3.229":
+bad = [f"{k}={ACTUAL[k]} (expected {v})" for k, v in EXPECTED.items() if ACTUAL[k] != v]
+if bad:
     raise SystemExit(
-        "Wrong Ultralytics version. Expected 8.3.229. "
-        "Delete .venv-model and reinstall tools/export-requirements.txt."
+        "Pinned export environment is not clean:\n  " + "\n  ".join(bad) +
+        "\nDelete .venv-model and reinstall tools/export-requirements.txt."
     )
 
 OUT = Path("exports")
