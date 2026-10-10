@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview" android:layout_width="match_parent" android:layout_height="match_parent"
+        app:scaleType="fillCenter"/>
+    <com.fungiradar.app.DetectionOverlay
+        android:id="@+id/overlay" android:layout_width="match_parent" android:layout_height="match_parent"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="top" android:orientation="vertical" android:padding="16dp"
+        android:background="#AA102018">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="FungiRadar • Live scan" android:textColor="#FFFFFF" android:textSize="22sp"
+            android:textStyle="bold"/>
+        <TextView android:id="@+id/status" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Starting camera…"
+            android:textColor="#FFFFFF" android:paddingTop="6dp"/>
+        <TextView android:id="@+id/location" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="GPS: not requested"
+            android:textColor="#DDFFFFFF" android:paddingTop="4dp"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_gravity="bottom" android:padding="16dp" android:orientation="vertical"
+        android:background="#CC102018">
+        <TextView android:id="@+id/thresholdLabel" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Confidence: 50%"
+            android:textColor="#FFFFFF"/>
+        <SeekBar android:id="@+id/threshold" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:max="90" android:progress="40"/>
+        <Button android:id="@+id/gpsButton" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Get GPS location"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Visual hints only — never use to decide edibility."
+            android:textColor="#FFFFFF" android:textSize="12sp"/>
+    </LinearLayout>
+</FrameLayout>
