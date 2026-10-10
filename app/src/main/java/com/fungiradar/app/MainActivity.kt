@@ -12,6 +12,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.widget.ArrayAdapter
 import android.widget.SeekBar
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -76,6 +77,13 @@ class MainActivity : AppCompatActivity() {
 
         store = ModelStore(this)
         detector = MushroomDetector(this)
+
+        var controlsOpen = false
+        ui.toggleControls.setOnClickListener {
+            controlsOpen = !controlsOpen
+            ui.controlPanel.visibility = if (controlsOpen) View.VISIBLE else View.GONE
+            ui.toggleControls.text = if (controlsOpen) "Controls ▼" else "Controls ▲"
+        }
 
         ui.presetSpinner.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item,
