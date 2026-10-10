@@ -34,7 +34,7 @@
             android:id="@+id/activeModelSummary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="USING NOW: No model"
+            android:text="AI: No model"
             android:textColor="#80CBC4"
             android:textSize="15sp"
             android:textStyle="bold"
@@ -163,7 +163,7 @@
                     android:id="@+id/importModel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Import local .tflite detector"/>
+                    android:text="Import local AI model (.tflite / .onnx)"/>
 
                 <TextView
                     android:layout_width="match_parent"

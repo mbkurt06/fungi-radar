@@ -155,7 +155,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         refreshModels()
-        ui.importModel.setOnClickListener { modelPicker.launch(arrayOf("application/octet-stream", "*/*")) }
+        ui.importModel.setOnClickListener { modelPicker.launch(arrayOf("application/octet-stream", "application/onnx", "*/*")) }
 
         ui.modelSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
@@ -212,7 +212,7 @@ class MainActivity : AppCompatActivity() {
         val models = store.list()
         ui.modelSpinner.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item,
-            models.map { ModelCatalog.friendlyName(it.name) }.ifEmpty { listOf("No model installed") }
+            models.map { ModelCatalog.shortName(it.name) }.ifEmpty { listOf("No model installed") }
         )
         val wanted = selectName ?: store.selected()?.name
         val index = models.indexOfFirst { it.name == wanted }
@@ -220,7 +220,7 @@ class MainActivity : AppCompatActivity() {
         ui.installedModels.text = if (models.isEmpty()) {
             "Installed: none"
         } else {
-            "Installed: " + models.joinToString(" • ") { ModelCatalog.friendlyName(it.name) }
+            "Installed (" + models.size + "): " + models.joinToString(" • ") { ModelCatalog.shortName(it.name) }
         }
         updateActiveModelUi()
         if (models.isEmpty()) ui.status.text = "Camera only — download a preset or import a detector"
