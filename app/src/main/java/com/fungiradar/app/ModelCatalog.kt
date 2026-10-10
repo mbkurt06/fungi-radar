@@ -34,4 +34,10 @@ object ModelCatalog {
             note = "COCO 80 classes • 448×448 input • slowest preset, best COCO accuracy here"
         )
     )
+
+    fun friendlyName(fileName: String?): String {
+        if (fileName.isNullOrBlank()) return "No model"
+        return presets.firstOrNull { it.fileName == fileName }?.title
+            ?: fileName.removeSuffix(".tflite")
+    }
 }

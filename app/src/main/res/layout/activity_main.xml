@@ -31,19 +31,28 @@
             android:textSize="22sp"
             android:textStyle="bold"/>
         <TextView
+            android:id="@+id/activeModelSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="USING NOW: No model"
+            android:textColor="#80CBC4"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:paddingTop="3dp"/>
+        <TextView
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Starting camera…"
             android:textColor="#FFFFFF"
-            android:paddingTop="4dp"/>
+            android:paddingTop="3dp"/>
         <TextView
             android:id="@+id/location"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="GPS: not requested"
             android:textColor="#DDFFFFFF"
-            android:paddingTop="4dp"/>
+            android:paddingTop="3dp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -103,15 +112,42 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Active AI model"
+                    android:text="USING NOW"
+                    android:textColor="#80CBC4"
+                    android:textStyle="bold"
+                    android:paddingTop="8dp"/>
+
+                <TextView
+                    android:id="@+id/activeModelPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No model"
                     android:textColor="#FFFFFF"
-                    android:paddingTop="4dp"/>
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Switch installed model"
+                    android:textColor="#FFFFFF"/>
 
                 <Spinner
                     android:id="@+id/modelSpinner"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:backgroundTint="#FFFFFF"/>
+
+                <TextView
+                    android:id="@+id/installedModels"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Installed: none"
+                    android:textColor="#B0BEC5"
+                    android:textSize="12sp"
+                    android:paddingBottom="6dp"/>
 
                 <Button
                     android:id="@+id/importModel"

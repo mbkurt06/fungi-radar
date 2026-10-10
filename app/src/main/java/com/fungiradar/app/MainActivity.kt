@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity() {
         ui.presetSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
-                ui.presetInfo.text = ModelCatalog.presets[position].note
+                updatePresetInfo(position)
             }
         }
 
@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity() {
                         ui.downloadPreset.isEnabled = true
                         refreshModels(selectName = file.name)
                         ui.status.text = "Downloaded — loading ${preset.title}"
+                        updatePresetInfo(ui.presetSpinner.selectedItemPosition)
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
@@ -146,9 +147,11 @@ class MainActivity : AppCompatActivity() {
                         val loaded = detector.load(file)
                         runOnUiThread {
                             ui.overlay.show(emptyList())
-                            ui.status.text = if (loaded) "AI ready: ${file.name}" else
+                            ui.status.text = if (loaded) "AI ready: ${ModelCatalog.friendlyName(file.name)}" else
                                 "Unsupported model: ${detector.lastError}"
                             running = loaded
+                            updateActiveModelUi()
+                            updatePresetInfo(ui.presetSpinner.selectedItemPosition)
                         }
                     }
                 }
@@ -188,7 +191,34 @@ class MainActivity : AppCompatActivity() {
         val wanted = selectName ?: store.selected()?.name
         val index = models.indexOfFirst { it.name == wanted }
         if (index >= 0) ui.modelSpinner.setSelection(index)
+        ui.installedModels.text = if (models.isEmpty()) {
+            "Installed: none"
+        } else {
+            "Installed: " + models.joinToString(" • ") { ModelCatalog.friendlyName(it.name) }
+        }
+        updateActiveModelUi()
         if (models.isEmpty()) ui.status.text = "Camera only — download a preset or import a detector"
+    }
+
+    private fun updateActiveModelUi() {
+        val name = ModelCatalog.friendlyName(detector.activeModel ?: store.selected()?.name)
+        ui.activeModelSummary.text = "USING NOW: $name"
+        ui.activeModelPanel.text = name
+    }
+
+    private fun updatePresetInfo(position: Int) {
+        val preset = ModelCatalog.presets.getOrNull(position) ?: return
+        val installed = store.list().any { it.name == preset.fileName }
+        val selected = store.selected()?.name == preset.fileName
+        val state = when {
+            selected && detector.activeModel == preset.fileName -> "✓ INSTALLED • USING NOW"
+            selected -> "✓ INSTALLED • SELECTED"
+            installed -> "✓ INSTALLED"
+            else -> "Not installed"
+        }
+        ui.presetInfo.text = "$state\n${preset.note}"
+        ui.downloadPreset.text = if (installed) "MODEL ALREADY INSTALLED" else "DOWNLOAD SELECTED MODEL"
+        ui.downloadPreset.isEnabled = !installed
     }
 
     private fun startCamera() {
