@@ -35,9 +35,16 @@ object ModelCatalog {
         )
     )
 
+    private val legacyNames = mapOf(
+        "tensorflow_ssd_mobilenet_v1_coco_test.tflite" to "SSD MobileNet V1 • test",
+        "tensorflow_ssd_mobilenet_v1_coco_test" to "SSD MobileNet V1 • test"
+    )
+
     fun friendlyName(fileName: String?): String {
         if (fileName.isNullOrBlank()) return "No model"
         return presets.firstOrNull { it.fileName == fileName }?.title
+            ?: legacyNames[fileName]
+            ?: legacyNames[fileName.removeSuffix(".tflite")]
             ?: fileName.removeSuffix(".tflite")
     }
 }

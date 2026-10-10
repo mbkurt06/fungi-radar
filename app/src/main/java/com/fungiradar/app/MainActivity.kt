@@ -186,7 +186,7 @@ class MainActivity : AppCompatActivity() {
         val models = store.list()
         ui.modelSpinner.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item,
-            models.map { it.name }.ifEmpty { listOf("No model installed") }
+            models.map { ModelCatalog.friendlyName(it.name) }.ifEmpty { listOf("No model installed") }
         )
         val wanted = selectName ?: store.selected()?.name
         val index = models.indexOfFirst { it.name == wanted }
