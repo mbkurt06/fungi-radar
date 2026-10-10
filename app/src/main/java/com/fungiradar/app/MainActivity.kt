@@ -2,6 +2,7 @@ package com.fungiradar.app
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -280,6 +281,14 @@ class MainActivity : AppCompatActivity() {
                 ui.location.text = if (loc == null) "GPS: no recent fix" else
                     "GPS: %.5f, %.5f".format(java.util.Locale.US, loc.latitude, loc.longitude)
             }.addOnFailureListener { ui.location.text = "GPS unavailable" }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Keep the current detector/camera session alive during portrait/landscape rotation.
+        // CameraX/PreviewView will relayout to the new dimensions.
+        ui.overlay.show(emptyList())
+        ViewCompat.requestApplyInsets(ui.root)
     }
 
     override fun onDestroy() {
