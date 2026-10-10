@@ -1,2 +1,6 @@
-ultralytics>=8.3,<9
-tensorflow>=2.15,<2.19
+# Pinned to the pre-LiteRT Ultralytics exporter.
+# Newer 8.4.x installs litert-torch/JAX and currently conflicts with the
+# TensorFlow/NumPy stack needed for this macOS ARM64 export path.
+ultralytics==8.3.229
+tensorflow==2.18.1
+numpy==1.26.4
