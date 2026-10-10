@@ -6,7 +6,6 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Import, download and select model files locally. */
 class ModelStore(private val context: Context) {
     private val dir = File(context.filesDir, "models").apply { mkdirs() }
     private val preferences = context.getSharedPreferences("models", Context.MODE_PRIVATE)
@@ -41,19 +40,17 @@ class ModelStore(private val context: Context) {
         return target
     }
 
-    fun downloadTestDetector(): File {
-        // Official TensorFlow Lite Task Vision demo model.
-        // COCO does NOT contain a mushroom class. This preset exists only to verify
-        // camera -> TFLite -> bounding-box -> alert integration on the phone.
-        val target = File(dir, "tensorflow_ssd_mobilenet_v1_coco_test.tflite")
+    fun download(preset: ModelPreset, progress: ((Int) -> Unit)? = null): File {
+        val target = File(dir, preset.fileName)
         if (target.exists() && target.length() > 1_000_000) return target
+        val temp = File(dir, preset.fileName + ".part")
+        temp.delete()
 
-        val url = URL("https://tfhub.dev/tensorflow/lite-model/ssd_mobilenet_v1/1/metadata/1?lite-format=tflite")
         var connection: HttpURLConnection? = null
         try {
-            connection = (url.openConnection() as HttpURLConnection).apply {
+            connection = (URL(preset.url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 15_000
-                readTimeout = 60_000
+                readTimeout = 120_000
                 instanceFollowRedirects = true
                 requestMethod = "GET"
             }
@@ -61,13 +58,26 @@ class ModelStore(private val context: Context) {
             require(connection.responseCode in 200..299) {
                 "Download failed: HTTP ${connection.responseCode}"
             }
+            val total = connection.contentLengthLong
             connection.inputStream.use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
+                temp.outputStream().use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var copied = 0L
+                    while (true) {
+                        val n = input.read(buffer)
+                        if (n <= 0) break
+                        output.write(buffer, 0, n)
+                        copied += n
+                        if (total > 0) progress?.invoke(((copied * 100) / total).toInt().coerceIn(0, 100))
+                    }
+                }
             }
-            validate(target)
+            validate(temp)
+            if (target.exists()) target.delete()
+            require(temp.renameTo(target)) { "Could not store model" }
             return target
         } catch (e: Exception) {
-            target.delete()
+            temp.delete()
             throw e
         } finally {
             connection?.disconnect()
@@ -75,6 +85,6 @@ class ModelStore(private val context: Context) {
     }
 
     private fun validate(file: File) {
-        require(file.length() in 1..150_000_000) { "Invalid model file size" }
+        require(file.length() in 1_000_000..150_000_000) { "Invalid model file size" }
     }
 }

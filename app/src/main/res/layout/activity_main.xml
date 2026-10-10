@@ -4,11 +4,14 @@
     android:id="@+id/root"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="#102018">
+
     <androidx.camera.view.PreviewView android:id="@+id/preview"
         android:layout_width="match_parent" android:layout_height="match_parent"
         app:scaleType="fillCenter"/>
+
     <com.fungiradar.app.DetectionOverlay android:id="@+id/overlay"
         android:layout_width="match_parent" android:layout_height="match_parent"/>
+
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_gravity="top" android:orientation="vertical" android:padding="12dp"
         android:background="#DD102018">
@@ -22,27 +25,45 @@
             android:layout_height="wrap_content" android:text="GPS: not requested"
             android:textColor="#DDFFFFFF" android:paddingTop="4dp"/>
     </LinearLayout>
+
     <ScrollView android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_gravity="bottom" android:fillViewport="false"
         android:background="#EE102018">
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:padding="12dp" android:orientation="vertical">
+
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="AI model" android:textColor="#FFFFFF"/>
+                android:text="Download model preset" android:textColor="#FFFFFF"/>
+            <Spinner android:id="@+id/presetSpinner" android:layout_width="match_parent"
+                android:layout_height="48dp" android:backgroundTint="#FFFFFF"/>
+            <TextView android:id="@+id/presetInfo" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:textColor="#FFFFCC80"
+                android:textSize="12sp" android:paddingBottom="4dp"/>
+            <Button android:id="@+id/downloadPreset" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:text="Download selected model"/>
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Active AI model" android:textColor="#FFFFFF" android:paddingTop="4dp"/>
             <Spinner android:id="@+id/modelSpinner" android:layout_width="match_parent"
                 android:layout_height="48dp" android:backgroundTint="#FFFFFF"/>
-            <Button android:id="@+id/downloadTestModel" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Download AI pipeline test model"/>
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:text="Test model detects COCO objects, not mushrooms. Use it only to verify AI boxes/alerts."
-                android:textColor="#FFFFCC80" android:textSize="12sp" android:paddingBottom="4dp"/>
+
             <Button android:id="@+id/importModel" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:text="Import local mushroom .tflite model"/>
+                android:layout_height="wrap_content" android:text="Import local .tflite detector"/>
+
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Target filter" android:textColor="#FFFFFF" android:paddingTop="4dp"/>
+            <Spinner android:id="@+id/targetSpinner" android:layout_width="match_parent"
+                android:layout_height="48dp" android:backgroundTint="#FFFFFF"/>
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:text="Mushroom/Tree filters become useful when a model containing those labels is imported."
+                android:textColor="#FFFFCC80" android:textSize="12sp"/>
+
             <TextView android:id="@+id/thresholdLabel" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="Confidence: 35%"
                 android:textColor="#FFFFFF"/>
             <SeekBar android:id="@+id/threshold" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:max="85" android:progress="25"/>
+
             <Button android:id="@+id/gpsButton" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:text="Get GPS location"/>
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content"

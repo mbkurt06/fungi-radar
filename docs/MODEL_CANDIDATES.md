@@ -1,24 +1,24 @@
-# Model candidates
+# Model catalog and target classes
 
-## 1. TensorFlow SSD MobileNet V1 COCO — integrated test preset
-Purpose: verify the complete Android inference pipeline (download, TFLite loading, boxes, confidence, beep/vibration). It is **not a mushroom detector** because COCO has no mushroom class.
+## Downloadable in the app now
+All four presets below are official TensorFlow Lite Task Vision compatible COCO detectors and can be switched without rebuilding:
+- SSD MobileNet V1 — fast baseline
+- EfficientDet Lite0 — balanced
+- EfficientDet Lite1 — medium
+- EfficientDet Lite2 — higher quality / slower
 
-Source: TensorFlow Lite Support official example / TensorFlow Hub metadata model.
-License: Apache-2.0 according to the TensorFlow model listing.
+COCO has 80 object classes. It includes person, chair, potted plant, car, dog, cat, etc. It does not include generic mushroom or tree classes.
 
-The app can download this preset itself.
+The app has a target filter. With COCO models you can test Person, Chair, Potted plant and other supported labels. Mushroom and Tree are already present as filter targets so a future/imported detector with those labels works without redesigning the UI.
 
-## 2. Open Images V4 SSD MobileNet V2 — primary general-mushroom research candidate
-Open Images includes a **Mushroom** boxable category. Google's SSD MobileNet V2 model is trained on all 600 Open Images V4 boxable classes and is Apache-2.0. The published artifact is a TensorFlow SavedModel, not currently a drop-in Task Vision TFLite detector. We need a verified conversion/export before shipping it on Android.
+## Mushroom + tree candidate
+Open Images V7 has roughly 600 detection classes and includes a much broader vocabulary than COCO, including classes useful to this project. YOLOv8n Open Images weights are available, but their TFLite export uses YOLO raw output and is not compatible with the current Task Vision decoder.
 
-Why it is promising: it directly has a generic Mushroom class, matching FungiRadar's first goal.
+Next engineering milestone:
+1. Add a dedicated YOLO TFLite decoder.
+2. Export/download YOLOv8n Open Images V7 TFLite.
+3. Bundle/associate the 600-class label map.
+4. Validate Mushroom and Tree labels on Samsung S24.
+5. Compare latency/recall against the custom one-class mushroom detector.
 
-## 3. FungiTastic DINOv3 — species classifier, secondary stage
-A recent mobile TFLite classifier covers thousands of fungi species. It is classification, not detection, so it cannot replace the detector. Later it can classify a crop after the detector finds a candidate.
-
-## Rule
-Do not label a model as production-ready until:
-- its redistributable license is verified,
-- Android input/output compatibility is tested,
-- false positives on leaves, pinecones, bark and rocks are measured,
-- it is field-tested on independent forest videos.
+Do not silently treat potted plant as tree or claim COCO finds mushrooms.

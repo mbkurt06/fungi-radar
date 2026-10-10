@@ -32,8 +32,21 @@ class MainActivity : AppCompatActivity() {
     private val executor = Executors.newSingleThreadExecutor()
     @Volatile private var threshold = 0.35f
     @Volatile private var running = false
+    @Volatile private var targetLabel: String? = null
     private var lastAlert = 0L
     private val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 65)
+
+    private val targetOptions = listOf(
+        "All objects" to null,
+        "Mushroom" to "mushroom",
+        "Tree" to "tree",
+        "Person" to "person",
+        "Chair" to "chair",
+        "Potted plant" to "potted plant",
+        "Car" to "car",
+        "Dog" to "dog",
+        "Cat" to "cat"
+    )
 
     private val cameraPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) startCamera() else ui.status.text = "Camera permission required"
@@ -54,7 +67,6 @@ class MainActivity : AppCompatActivity() {
         ui = ActivityMainBinding.inflate(layoutInflater)
         setContentView(ui.root)
 
-        // Android 15+ can draw edge-to-edge by default. Respect status/navigation bars.
         ViewCompat.setOnApplyWindowInsetsListener(ui.root) { view, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.setPadding(0, bars.top, 0, bars.bottom)
@@ -64,29 +76,56 @@ class MainActivity : AppCompatActivity() {
 
         store = ModelStore(this)
         detector = MushroomDetector(this)
-        refreshModels()
 
-        ui.importModel.setOnClickListener { modelPicker.launch(arrayOf("application/octet-stream", "*/*")) }
-        ui.downloadTestModel.setOnClickListener {
-            ui.downloadTestModel.isEnabled = false
-            ui.status.text = "Downloading TensorFlow test detector…"
+        ui.presetSpinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item,
+            ModelCatalog.presets.map { it.title }
+        )
+        ui.presetSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                ui.presetInfo.text = ModelCatalog.presets[position].note
+            }
+        }
+
+        ui.downloadPreset.setOnClickListener {
+            val preset = ModelCatalog.presets[ui.presetSpinner.selectedItemPosition]
+            ui.downloadPreset.isEnabled = false
+            ui.status.text = "Downloading ${preset.title}…"
             Thread {
                 try {
-                    val file = store.downloadTestDetector()
+                    val file = store.download(preset) { percent ->
+                        runOnUiThread { ui.status.text = "Downloading ${preset.title}… $percent%" }
+                    }
                     store.select(file)
                     runOnUiThread {
-                        ui.downloadTestModel.isEnabled = true
+                        ui.downloadPreset.isEnabled = true
                         refreshModels(selectName = file.name)
-                        ui.status.text = "Test model downloaded — loading…"
+                        ui.status.text = "Downloaded — loading ${preset.title}"
                     }
                 } catch (e: Exception) {
                     runOnUiThread {
-                        ui.downloadTestModel.isEnabled = true
+                        ui.downloadPreset.isEnabled = true
                         ui.status.text = "Model download failed: ${e.message}"
                     }
                 }
             }.start()
         }
+
+        ui.targetSpinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item,
+            targetOptions.map { it.first }
+        )
+        ui.targetSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
+                targetLabel = targetOptions[position].second
+                ui.overlay.show(emptyList())
+            }
+        }
+
+        refreshModels()
+        ui.importModel.setOnClickListener { modelPicker.launch(arrayOf("application/octet-stream", "*/*")) }
 
         ui.modelSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
@@ -99,10 +138,8 @@ class MainActivity : AppCompatActivity() {
                         val loaded = detector.load(file)
                         runOnUiThread {
                             ui.overlay.show(emptyList())
-                            ui.status.text = if (loaded) {
-                                val suffix = if (file.name.contains("coco_test")) " (pipeline test; no mushroom class)" else ""
-                                "AI ready: ${file.name}$suffix"
-                            } else "Unsupported model: ${detector.lastError}"
+                            ui.status.text = if (loaded) "AI ready: ${file.name}" else
+                                "Unsupported model: ${detector.lastError}"
                             running = loaded
                         }
                     }
@@ -136,13 +173,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshModels(selectName: String? = null) {
         val models = store.list()
-        val labels = models.map { it.name }
-        ui.modelSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
-            labels.ifEmpty { listOf("No model installed") })
+        ui.modelSpinner.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_dropdown_item,
+            models.map { it.name }.ifEmpty { listOf("No model installed") }
+        )
         val wanted = selectName ?: store.selected()?.name
         val index = models.indexOfFirst { it.name == wanted }
         if (index >= 0) ui.modelSpinner.setSelection(index)
-        if (models.isEmpty()) ui.status.text = "Camera only — download the test detector or import a mushroom model"
+        if (models.isEmpty()) ui.status.text = "Camera only — download a preset or import a detector"
     }
 
     private fun startCamera() {
@@ -163,10 +201,11 @@ class MainActivity : AppCompatActivity() {
                                 val matrix = android.graphics.Matrix().apply { postRotate(rotation.toFloat()) }
                                 android.graphics.Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, matrix, true)
                             } else raw
-                            val found = detector.detect(bitmap, threshold)
+                            val found = detector.detect(bitmap, threshold, targetLabel)
                             runOnUiThread {
                                 ui.overlay.show(found)
-                                ui.status.text = "Scanning • ${found.size} detection(s)"
+                                val filter = targetLabel?.let { " • $it" } ?: ""
+                                ui.status.text = "Scanning$filter • ${found.size} detection(s)"
                                 if (found.isNotEmpty()) alert()
                             }
                         }
